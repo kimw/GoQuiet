@@ -137,7 +137,6 @@ func initSequence(ssConn net.Conn, sta *gqclient.State) {
 	}
 	go p.remoteToSS()
 	go p.ssToRemote()
-
 }
 
 func main() {
@@ -224,5 +223,4 @@ func main() {
 		}
 		go initSequence(conn, sta)
 	}
-
 }

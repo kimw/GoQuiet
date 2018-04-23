@@ -46,6 +46,5 @@ func TestIsSS(t *testing.T) {
 				"got", isss,
 			)
 		}
-
 	}
 }
