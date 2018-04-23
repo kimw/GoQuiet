@@ -46,20 +46,20 @@ func (pair *ssPair) closePipe() {
 }
 
 func (pair *webPair) serverToRemote() {
+	defer pair.closePipe()
 	for {
 		length, err := io.Copy(pair.remote, pair.webServer)
 		if err != nil || length == 0 {
-			pair.closePipe()
 			return
 		}
 	}
 }
 
 func (pair *webPair) remoteToServer() {
+	defer pair.closePipe()
 	for {
 		length, err := io.Copy(pair.webServer, pair.remote)
 		if err != nil || length == 0 {
-			pair.closePipe()
 			return
 		}
 	}
@@ -67,16 +67,15 @@ func (pair *webPair) remoteToServer() {
 
 func (pair *ssPair) remoteToServer() {
 	buf := make([]byte, 20480)
+	defer pair.closePipe()
 	for {
 		i, err := gqserver.ReadTillDrain(pair.remote, buf)
 		if err != nil {
-			pair.closePipe()
 			return
 		}
 		data := gqserver.PeelRecordLayer(buf[:i])
 		_, err = pair.ss.Write(data)
 		if err != nil {
-			pair.closePipe()
 			return
 		}
 	}
@@ -84,17 +83,16 @@ func (pair *ssPair) remoteToServer() {
 
 func (pair *ssPair) serverToRemote() {
 	buf := make([]byte, 10240)
+	defer pair.closePipe()
 	for {
 		i, err := io.ReadAtLeast(pair.ss, buf, 1)
 		if err != nil {
-			pair.closePipe()
 			return
 		}
 		data := buf[:i]
 		data = gqserver.AddRecordLayer(data, []byte{0x17}, []byte{0x03, 0x03})
 		_, err = pair.remote.Write(data)
 		if err != nil {
-			pair.closePipe()
 			return
 		}
 	}

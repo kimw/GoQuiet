@@ -38,16 +38,15 @@ func (p *pair) closePipe() {
 
 func (p *pair) remoteToSS() {
 	buf := make([]byte, 20480)
+	defer p.closePipe()
 	for {
 		i, err := gqclient.ReadTillDrain(p.remote, buf)
 		if err != nil {
-			p.closePipe()
 			return
 		}
 		data := TLS.PeelRecordLayer(buf[:i])
 		_, err = p.ss.Write(data)
 		if err != nil {
-			p.closePipe()
 			return
 		}
 	}
@@ -55,17 +54,16 @@ func (p *pair) remoteToSS() {
 
 func (p *pair) ssToRemote() {
 	buf := make([]byte, 10240)
+	defer p.closePipe()
 	for {
 		i, err := io.ReadAtLeast(p.ss, buf, 1)
 		if err != nil {
-			p.closePipe()
 			return
 		}
 		data := buf[:i]
 		data = TLS.AddRecordLayer(data, []byte{0x17}, []byte{0x03, 0x03})
 		_, err = p.remote.Write(data)
 		if err != nil {
-			p.closePipe()
 			return
 		}
 	}
