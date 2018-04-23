@@ -4,9 +4,10 @@ package TLS
 
 import (
 	"encoding/hex"
-	"github.com/cbeuw/GoQuiet/gqclient"
 	"math/rand"
 	"time"
+
+	"github.com/cbeuw/GoQuiet/gqclient"
 )
 
 type chrome struct {

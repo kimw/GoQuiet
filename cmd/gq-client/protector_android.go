@@ -65,9 +65,10 @@ set_timeout(int sock)
 import "C"
 
 import (
-	"github.com/cbeuw/gotfo"
 	"log"
 	"syscall"
+
+	"github.com/cbeuw/gotfo"
 )
 
 // In Android, once an app starts the VpnService, all outgoing traffic are routed by the system

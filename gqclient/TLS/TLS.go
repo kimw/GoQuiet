@@ -2,8 +2,9 @@ package TLS
 
 import (
 	"encoding/binary"
-	"github.com/cbeuw/GoQuiet/gqclient"
 	"time"
+
+	"github.com/cbeuw/GoQuiet/gqclient"
 )
 
 // AddRecordLayer adds record layer to data

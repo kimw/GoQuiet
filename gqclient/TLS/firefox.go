@@ -3,6 +3,7 @@ package TLS
 
 import (
 	"encoding/hex"
+
 	"github.com/cbeuw/GoQuiet/gqclient"
 )
 
