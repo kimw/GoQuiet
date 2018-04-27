@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strings"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/cbeuw/GoQuiet/gqserver"
 	"github.com/cbeuw/gotfo"
+	logging "github.com/op/go-logging"
 )
 
 var version string
@@ -104,7 +104,7 @@ func dispatchConnection(conn net.Conn, sta *gqserver.State) {
 	goWeb := func(data []byte) {
 		pair, err := makeWebPipe(conn, sta)
 		if err != nil {
-			log.Printf("Making connection to redirection server: %v\n", err)
+			log.Errorf("Making connection to redirection server: %v\n", err)
 			go conn.Close()
 			return
 		}
@@ -139,7 +139,7 @@ func dispatchConnection(conn net.Conn, sta *gqserver.State) {
 
 	isSS := gqserver.IsSS(ch, sta)
 	if !isSS {
-		log.Printf("+1 non SS traffic from %v\n", conn.RemoteAddr())
+		log.Debugf("+1 non SS traffic from %v\n", conn.RemoteAddr())
 		goWeb(data)
 		return
 	}
@@ -147,7 +147,7 @@ func dispatchConnection(conn net.Conn, sta *gqserver.State) {
 	reply := gqserver.ComposeReply(ch)
 	_, err = conn.Write(reply)
 	if err != nil {
-		log.Printf("Sending reply to remote: %v\n", err)
+		log.Errorf("Sending reply to remote: %v\n", err)
 		go conn.Close()
 		return
 	}
@@ -157,7 +157,7 @@ func dispatchConnection(conn net.Conn, sta *gqserver.State) {
 	for c := 0; c < 2; c++ {
 		_, err = gqserver.ReadTillDrain(conn, discardBuf)
 		if err != nil {
-			log.Printf("Reading discarded message %v: %v\n", c, err)
+			log.Errorf("Reading discarded message %v: %v\n", c, err)
 			go conn.Close()
 			return
 		}
@@ -210,6 +210,19 @@ func usedRandomCleaner(sta *gqserver.State) {
 	}
 }
 
+var log *logging.Logger
+
+func init() {
+	// Initial logger
+	log = logging.MustGetLogger("go-server")
+	format := logging.MustStringFormatter(
+		` %{color}%{time:2006-01-02 15:04:05} %{level}: %{shortfile}%{color:reset} %{message}`,
+	)
+	backend := logging.NewLogBackend(os.Stderr, "", 0)
+	backendFormatter := logging.NewBackendFormatter(backend, format)
+	logging.SetBackend(backendFormatter)
+}
+
 func main() {
 	// Should be 127.0.0.1 to listen to ss-server on this machine
 	var localHost string
@@ -250,7 +263,7 @@ func main() {
 		}
 		localHost = strings.Split(*localAddr, ":")[0]
 		localPort = strings.Split(*localAddr, ":")[1]
-		log.Printf("Starting standalone mode, listening on %v:%v to ss at %v:%v\n", remoteHost, remotePort, localHost, localPort)
+		log.Noticef("Starting standalone mode, listening on %v:%v to ss at %v:%v\n", remoteHost, remotePort, localHost, localPort)
 	}
 	sta := &gqserver.State{
 		SS_LOCAL_HOST:  localHost,
@@ -274,14 +287,14 @@ func main() {
 
 	listen := func(addr, port string) {
 		listener, err := gotfo.Listen(addr+":"+port, sta.FastOpen)
-		log.Println("Listening on " + addr + ":" + port)
+		log.Notice("Listening on " + addr + ":" + port)
 		if err != nil {
 			log.Fatal(err)
 		}
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				log.Printf("%v", err)
+				log.Error(err)
 				continue
 			}
 			go dispatchConnection(conn, sta)
@@ -303,5 +316,4 @@ func main() {
 			go listen(ip, sta.SS_REMOTE_PORT)
 		}
 	}
-
 }

@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/cbeuw/GoQuiet/gqclient"
 	"github.com/cbeuw/GoQuiet/gqclient/TLS"
 	"github.com/cbeuw/gotfo"
+	logging "github.com/op/go-logging"
 )
 
 var version string
@@ -90,18 +90,18 @@ func initSequence(ssConn net.Conn, sta *gqclient.State) {
 	if sta.FastOpen {
 		remoteConn, err = gotfo.Dial(sta.SS_REMOTE_HOST+":"+sta.SS_REMOTE_PORT, true, clientHello)
 		if err != nil {
-			log.Printf("Connecting and sending ClientHello to remote: %v\n", err)
+			log.Errorf("Connecting and sending ClientHello to remote: %v\n", err)
 			return
 		}
 	} else {
 		remoteConn, err = gotfo.Dial(sta.SS_REMOTE_HOST+":"+sta.SS_REMOTE_PORT, false, nil)
 		if err != nil {
-			log.Printf("Connecting to remote: %v\n", err)
+			log.Errorf("Connecting to remote: %v\n", err)
 			return
 		}
 		_, err = remoteConn.Write(clientHello)
 		if err != nil {
-			log.Printf("Sending ClientHello: %v\n", err)
+			log.Errorf("Sending ClientHello: %v\n", err)
 			return
 		}
 	}
@@ -111,7 +111,7 @@ func initSequence(ssConn net.Conn, sta *gqclient.State) {
 	for c := 0; c < 3; c++ {
 		_, err = gqclient.ReadTillDrain(remoteConn, discardBuf)
 		if err != nil {
-			log.Printf("Reading discarded message %v: %v\n", c, err)
+			log.Errorf("Reading discarded message %v: %v\n", c, err)
 			return
 		}
 	}
@@ -119,7 +119,7 @@ func initSequence(ssConn net.Conn, sta *gqclient.State) {
 	reply := TLS.ComposeReply()
 	_, err = remoteConn.Write(reply)
 	if err != nil {
-		log.Printf("Sending reply to remote: %v\n", err)
+		log.Errorf("Sending reply to remote: %v\n", err)
 		return
 	}
 	p := pair{
@@ -131,13 +131,25 @@ func initSequence(ssConn net.Conn, sta *gqclient.State) {
 	data = TLS.AddRecordLayer(data, []byte{0x17}, []byte{0x03, 0x03})
 	_, err = p.remote.Write(data)
 	if err != nil {
-		log.Printf("Sending first SS data to remote: %v\n", err)
+		log.Errorf("Sending first SS data to remote: %v\n", err)
 		p.closePipe()
 		return
 	}
 	go p.remoteToSS()
 	go p.ssToRemote()
+}
 
+var log *logging.Logger
+
+func init() {
+	// Initial logger
+	log = logging.MustGetLogger("go-server")
+	format := logging.MustStringFormatter(
+		` %{color}%{time:2006-01-02 15:04:05} %{level}: %{shortfile}%{color:reset} %{message}`,
+	)
+	backend := logging.NewLogBackend(os.Stderr, "", 0)
+	backendFormatter := logging.NewBackendFormatter(backend, format)
+	logging.SetBackend(backendFormatter)
 }
 
 func main() {
@@ -181,7 +193,7 @@ func main() {
 			return
 		}
 
-		log.Printf("Starting standalone mode. Listening for ss on %v:%v\n", localHost, localPort)
+		log.Noticef("Starting standalone mode. Listening for ss on %v:%v\n", localHost, localPort)
 	}
 
 	opaque := gqclient.BtoInt(gqclient.CryptoRandBytes(32))
@@ -219,10 +231,9 @@ func main() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 			continue
 		}
 		go initSequence(conn, sta)
 	}
-
 }

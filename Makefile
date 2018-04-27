@@ -6,12 +6,12 @@ version=$(shell ver=$$(git log -n 1 --pretty=oneline --format=%D | awk -F, '{pri
 	fi ; \
 	echo $$ver)
 
-client: 
-	go get github.com/cbeuw/gotfo
-	go build -ldflags "-X main.version=${version}" -o ./build/gq-client ./cmd/gq-client 
+client:
+	go get github.com/cbeuw/gotfo github.com/op/go-logging
+	go build -ldflags "-X main.version=${version}" -o ./build/gq-client ./cmd/gq-client
 
-server: 
-	go get github.com/cbeuw/gotfo
+server:
+	go get github.com/cbeuw/gotfo github.com/op/go-logging
 	go build -ldflags "-X main.version=${version}" -o ./build/gq-server ./cmd/gq-server
 
 all: client server
